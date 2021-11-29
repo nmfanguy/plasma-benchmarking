@@ -1,9 +1,10 @@
 #! /usr/bin/python3
 
-import csv
 import numpy as np
 import os
 import pyarrow as pa
+from pyarrow import csv
+from pyarrow import json
 import pyarrow.parquet as pq
 import pyarrow.plasma as plasma
 from rich import print
@@ -82,7 +83,7 @@ def roundtrip_file_stream(client: plasma.PlasmaClient, filename: str):
         stream.write(buf)
 
 
-def roundtrip_parquet_mem(client: plasma.PlasmaClient, table: pa.Table):
+def roundtrip_mem_table(client: plasma.PlasmaClient, table: pa.Table):
     '''
     Roundtrip an in-memory PyArrow Table to the Plasma store.
     '''
@@ -131,7 +132,13 @@ def add_header_row(out: Table, title: str):
 
 def main():
     print("*** [green u]Starting the Plasma Benchmark[/] ***")
-    
+   
+    # parse command-line args
+    check_huge_files = True
+
+    if len(sys.argv) > 1 and sys.argv[1] == "-o":
+        check_huge_files = False
+ 
     # connect to the running plasma server
     start = timeit.default_timer()
     client = plasma.connect("/tmp/plasma")
@@ -146,7 +153,7 @@ def main():
         header_style="cyan")
     
     with Progress("{task.description}", BarColumn(), "{task.percentage:>3.0f}%") as progress:
-        benchmark = progress.add_task("Progress", total=14)
+        benchmark = progress.add_task("Progress", total=18 if check_huge_files else 16)
     
         out.add_row("create client", str(1), str(end - start), str(end - start))
         progress.update(benchmark, advance=1)
@@ -158,19 +165,20 @@ def main():
         progress.update(benchmark, advance=1)
         time_and_output(out, "json", 10, lambda: roundtrip_file(client, "in/test_data.json"))
         progress.update(benchmark, advance=1)
-      
+     
+        if check_huge_files:
+            add_header_row(out, "HUGE FILES")
+            time_and_output(out, "csv", 1, lambda: roundtrip_file(client, "in/huge_test_data.csv"))
+            progress.update(benchmark, advance=1)
+            time_and_output(out, "json", 1, lambda: roundtrip_file(client, "in/huge_test_data.json"))
+            progress.update(benchmark, advance=1)
+     
         add_header_row(out, "STREAMS")
         time_and_output(out, "csv", 10, lambda: roundtrip_file_stream(client, "in/test_data.csv"))
         progress.update(benchmark, advance=1)
         time_and_output(out, "json", 10, lambda: roundtrip_file_stream(client, "in/test_data.json"))
         progress.update(benchmark, advance=1)
         time_and_output(out, "parquet", 10, lambda: roundtrip_file_stream(client, "in/test_data.parquet"))
-        progress.update(benchmark, advance=1)
-
-        add_header_row(out, "HUGE FILES")
-        time_and_output(out, "csv", 1, lambda: roundtrip_file(client, "in/huge_test_data.json"))
-        progress.update(benchmark, advance=1)
-        time_and_output(out, "json", 1, lambda: roundtrip_file(client, "in/huge_test_data.csv"))
         progress.update(benchmark, advance=1)
        
         add_header_row(out, "HUGE STREAMS")
@@ -181,15 +189,30 @@ def main():
         time_and_output(out, "parquet", 1, lambda: roundtrip_file_stream(client, "in/huge_test_data.parquet"))
         progress.update(benchmark, advance=1)
 
+        # this is not included in the computation time -- read in all the in-mem tables
+        regular_csv_table = csv.read_csv("in/test_data.csv")       
+        huge_csv_table = csv.read_csv("in/huge_test_data.csv")
         regular_pq_table = pq.read_table("in/test_data.parquet", memory_map=True)
         huge_pq_table = pq.read_table("in/huge_test_data.parquet", memory_map=True)
+        regular_json_table = json.read_json("in/test_data.json")
+        huge_json_table = json.read_json("in/huge_test_data.json")
 
         add_header_row(out, "IN-MEMORY OBJS")
-        time_and_output(out, "reg. parquet", 10, lambda: roundtrip_parquet_mem(client, regular_pq_table))
+        time_and_output(out, "csv", 10, lambda: roundtrip_mem_table(client, regular_csv_table))
         progress.update(benchmark, advance=1)
-        time_and_output(out, "huge parquet", 10, lambda: roundtrip_parquet_mem(client, huge_pq_table))
+        time_and_output(out, "json", 10, lambda: roundtrip_mem_table(client, regular_json_table))
+        progress.update(benchmark, advance=1)
+        time_and_output(out, "parquet", 10, lambda: roundtrip_mem_table(client, regular_pq_table))
         progress.update(benchmark, advance=1)
 
+        add_header_row(out, "HUGE IN-MEMORY OBJS")
+        time_and_output(out, "csv", 10, lambda: roundtrip_mem_table(client, huge_csv_table))
+        progress.update(benchmark, advance=1)
+        time_and_output(out, "json", 10, lambda: roundtrip_mem_table(client, huge_json_table))
+        progress.update(benchmark, advance=1)   
+        time_and_output(out, "parquet", 10, lambda: roundtrip_mem_table(client, huge_pq_table))
+        progress.update(benchmark, advance=1)
+ 
     console.print(out)
 
     print("*** [green u]Ending the Plasma Benchmark[/] ***")
