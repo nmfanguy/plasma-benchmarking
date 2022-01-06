@@ -2,3 +2,4 @@ in/huge*
 /out
 *.swp
 *.swo
+/results

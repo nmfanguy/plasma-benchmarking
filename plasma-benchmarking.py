@@ -130,15 +130,32 @@ def add_header_row(out: Table, title: str):
     out.add_row("[cyan]>>> {0} <<<[/]".format(title), "", "", "")
 
 
+def print_help():
+    '''
+    Print help information about this program.
+    '''
+    print()
+    print("[green]USAGE[/]: plasma-benchmarking.py [red][OPTIONS][/]")
+    print("Where [red][OPTIONS][/] := ")
+    print("\t[cyan]-h[/] | [cyan]--help[/] - display this help, then exit")
+    print("\t[cyan]-o[/] | [cyan]--omit-huge[/] - omit sending \"huge\" data files; useful for reducing execution time")
+
+
 def main():
-    print("*** [green u]Starting the Plasma Benchmark[/] ***")
-   
-    # parse command-line args
     check_huge_files = True
 
-    if len(sys.argv) > 1 and sys.argv[1] == "-o":
+    if len(sys.argv) > 1 and sys.argv[1] in ["-h", "--help"]:
+        print_help()
+        sys.exit(0)
+    if len(sys.argv) > 1 and sys.argv[1] in ["-o", "--omit-huge"]:
         check_huge_files = False
  
+    print("*** [green u]Starting the Plasma Benchmark[/] ***")  
+  
+    # parse command-line args
+    # parse command-line args
+    # parse command-line args
+    # parse command-line args
     # connect to the running plasma server
     start = timeit.default_timer()
     client = plasma.connect("/tmp/plasma")
@@ -153,40 +170,42 @@ def main():
         header_style="cyan")
     
     with Progress("{task.description}", BarColumn(), "{task.percentage:>3.0f}%") as progress:
-        benchmark = progress.add_task("Progress", total=18 if check_huge_files else 16)
+        benchmark = progress.add_task("Working...", total=18 if check_huge_files else 16)
     
         out.add_row("create client", str(1), str(end - start), str(end - start))
         progress.update(benchmark, advance=1)
-        time_and_output(out, "connection check", 10, lambda: check_connection(client))
+        time_and_output(out, "connection check", 1000, lambda: check_connection(client))
         progress.update(benchmark, advance=1)
 
         add_header_row(out, "FILES")
-        time_and_output(out, "csv", 10, lambda: roundtrip_file(client, "in/test_data.csv"))
+        time_and_output(out, "csv", 1000, lambda: roundtrip_file(client, "in/test_data.csv"))
         progress.update(benchmark, advance=1)
-        time_and_output(out, "json", 10, lambda: roundtrip_file(client, "in/test_data.json"))
+        time_and_output(out, "json", 1000, lambda: roundtrip_file(client, "in/test_data.json"))
         progress.update(benchmark, advance=1)
      
+        add_header_row(out, "HUGE FILES")
         if check_huge_files:
-            add_header_row(out, "HUGE FILES")
-            time_and_output(out, "csv", 1, lambda: roundtrip_file(client, "in/huge_test_data.csv"))
+            time_and_output(out, "csv", 100, lambda: roundtrip_file(client, "in/huge_test_data.csv"))
             progress.update(benchmark, advance=1)
-            time_and_output(out, "json", 1, lambda: roundtrip_file(client, "in/huge_test_data.json"))
+            time_and_output(out, "json", 100, lambda: roundtrip_file(client, "in/huge_test_data.json"))
             progress.update(benchmark, advance=1)
-     
+        else:
+            out.add_row("[red]omitted[/]", "", "", "")    
+ 
         add_header_row(out, "STREAMS")
-        time_and_output(out, "csv", 10, lambda: roundtrip_file_stream(client, "in/test_data.csv"))
+        time_and_output(out, "csv", 1000, lambda: roundtrip_file_stream(client, "in/test_data.csv"))
         progress.update(benchmark, advance=1)
-        time_and_output(out, "json", 10, lambda: roundtrip_file_stream(client, "in/test_data.json"))
+        time_and_output(out, "json", 1000, lambda: roundtrip_file_stream(client, "in/test_data.json"))
         progress.update(benchmark, advance=1)
-        time_and_output(out, "parquet", 10, lambda: roundtrip_file_stream(client, "in/test_data.parquet"))
+        time_and_output(out, "parquet", 1000, lambda: roundtrip_file_stream(client, "in/test_data.parquet"))
         progress.update(benchmark, advance=1)
        
         add_header_row(out, "HUGE STREAMS")
-        time_and_output(out, "csv", 1, lambda: roundtrip_file_stream(client, "in/huge_test_data.csv"))
+        time_and_output(out, "csv", 100, lambda: roundtrip_file_stream(client, "in/huge_test_data.csv"))
         progress.update(benchmark, advance=1)
-        time_and_output(out, "json", 1, lambda: roundtrip_file_stream(client, "in/huge_test_data.json"))
+        time_and_output(out, "json", 100, lambda: roundtrip_file_stream(client, "in/huge_test_data.json"))
         progress.update(benchmark, advance=1)
-        time_and_output(out, "parquet", 1, lambda: roundtrip_file_stream(client, "in/huge_test_data.parquet"))
+        time_and_output(out, "parquet", 100, lambda: roundtrip_file_stream(client, "in/huge_test_data.parquet"))
         progress.update(benchmark, advance=1)
 
         # this is not included in the computation time -- read in all the in-mem tables
@@ -198,19 +217,19 @@ def main():
         huge_json_table = json.read_json("in/huge_test_data.json")
 
         add_header_row(out, "IN-MEMORY OBJS")
-        time_and_output(out, "csv", 10, lambda: roundtrip_mem_table(client, regular_csv_table))
+        time_and_output(out, "csv", 1000, lambda: roundtrip_mem_table(client, regular_csv_table))
         progress.update(benchmark, advance=1)
-        time_and_output(out, "json", 10, lambda: roundtrip_mem_table(client, regular_json_table))
+        time_and_output(out, "json", 1000, lambda: roundtrip_mem_table(client, regular_json_table))
         progress.update(benchmark, advance=1)
-        time_and_output(out, "parquet", 10, lambda: roundtrip_mem_table(client, regular_pq_table))
+        time_and_output(out, "parquet", 1000, lambda: roundtrip_mem_table(client, regular_pq_table))
         progress.update(benchmark, advance=1)
 
         add_header_row(out, "HUGE IN-MEMORY OBJS")
-        time_and_output(out, "csv", 10, lambda: roundtrip_mem_table(client, huge_csv_table))
+        time_and_output(out, "csv", 1000, lambda: roundtrip_mem_table(client, huge_csv_table))
         progress.update(benchmark, advance=1)
-        time_and_output(out, "json", 10, lambda: roundtrip_mem_table(client, huge_json_table))
+        time_and_output(out, "json", 1000, lambda: roundtrip_mem_table(client, huge_json_table))
         progress.update(benchmark, advance=1)   
-        time_and_output(out, "parquet", 10, lambda: roundtrip_mem_table(client, huge_pq_table))
+        time_and_output(out, "parquet", 1000, lambda: roundtrip_mem_table(client, huge_pq_table))
         progress.update(benchmark, advance=1)
  
     console.print(out)
