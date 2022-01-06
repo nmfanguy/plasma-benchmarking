@@ -144,6 +144,7 @@ def print_help():
 def main():
     check_huge_files = True
 
+    # parse command-line args
     if len(sys.argv) > 1 and sys.argv[1] in ["-h", "--help"]:
         print_help()
         sys.exit(0)
@@ -152,10 +153,6 @@ def main():
  
     print("*** [green u]Starting the Plasma Benchmark[/] ***")  
   
-    # parse command-line args
-    # parse command-line args
-    # parse command-line args
-    # parse command-line args
     # connect to the running plasma server
     start = timeit.default_timer()
     client = plasma.connect("/tmp/plasma")
