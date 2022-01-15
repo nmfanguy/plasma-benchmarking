@@ -1,8 +1,9 @@
 #! /usr/bin/bash
 
-echo "*** [RUN]: plasma_store -m 1000000000 -s /tmp/plasma ***"
+echo "*** [RUN]: plasma_store -m 100000000000 -s /tmp/plasma ***"
 echo
 
-/home/fanguy/.local/bin/plasma_store -m 10000000000 -s /tmp/plasma
+# 100,000,000,000 == 100 GB
+/home/fanguy/.local/bin/plasma_store -m 100000000000 -s /tmp/plasma
 
 echo

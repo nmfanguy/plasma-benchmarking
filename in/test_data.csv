@@ -1,4 +1,4 @@
-id,uuid,date-edited,name,value
-0,0000-1111-2222-3333,2021-10-16,Johhny Appleseed,26.0
-1,1111-2222-3333-4444,2021-10-16,Mary Poppins,35.204
-2,2222-3333-4444-5555,2021-10-15,Jack the Ripper,583205.3
+id,uuid,name,value
+0,0000-1111-2222-3333,Johhny Appleseed,26.0
+1,1111-2222-3333-4444,Mary Poppins,35.204
+2,2222-3333-4444-5555,Jack the Ripper,583205.3

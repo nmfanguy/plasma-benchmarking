@@ -3,3 +3,4 @@ in/huge*
 *.swp
 *.swo
 /results
+__pycache__/
