@@ -23,6 +23,7 @@ def print_help():
 def main():
     check_huge_files = True
     REPS = 1000
+    WARMUPS = 100
 
     # parse command-line args
     if len(sys.argv) > 1 and sys.argv[1] in ["-h", "--help"]:
@@ -52,6 +53,7 @@ def main():
         datasets.append(Dataset(file, client))
 
     # process each dataset
+    runs = 0
     for d in datasets:
         if not check_huge_files and d.is_huge:
             continue
@@ -59,19 +61,21 @@ def main():
         print("{0}...".format(d.filename), end="")
         sys.stdout.flush()
 
-        # do less reps for huge files to save compute time
-        n = int(REPS / 10) if d.is_huge else REPS
+        n = REPS - WARMUPS
 
         # parquet files can't use the Python file API, so skip this check for those
         if d.can_use_file:
+            warmup = timeit.timeit(d.roundtrip_file, number=100)
             t = timeit.timeit(d.roundtrip_file, number=n)
             time_per = t / (d.file_bytes * n)
             files.add_row(d.filename, d.type.upper(), str(d.file_bytes), str(n), str(t), str(time_per))
 
+        warmup = timeit.timeit(d.roundtrip_stream, number=100)
         t = timeit.timeit(d.roundtrip_stream, number=n)
         time_per = t / (d.file_bytes * n)
         streams.add_row(d.filename, d.type.upper(), str(d.stream_bytes), str(n), str(t), str(time_per))
 
+        warmup = timeit.timeit(d.roundtrip_table, number=100)
         t = timeit.timeit(d.roundtrip_table, number=n)
         time_per = t / (d.file_bytes * n)
         tables.add_row(d.filename, d.type.upper(), str(d.table_bytes), str(n), str(t), str(time_per))
